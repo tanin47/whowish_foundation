@@ -1,7 +1,7 @@
-require 'helpers/thumbnailism_helper'
-require 'controllers/thumbnail_controller'
-require 'controllers/temporary_image_controller'
-require 'models/temporary_image'
+require 'app/helpers/thumbnailism_helper'
+require 'app/controllers/thumbnail_controller'
+require 'app/controllers/temporary_image_controller'
+require 'app/models/temporary_image'
 require 'image_helper'
 require 'foundation'
 

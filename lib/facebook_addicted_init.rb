@@ -1,5 +1,5 @@
 
-require 'controllers/redirect_controller'
+require 'app/controllers/redirect_controller'
 
 # load all controllers, helpers, and models
 %w{ controllers }.each do |dir|

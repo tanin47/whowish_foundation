@@ -18,8 +18,8 @@ rescue
 end
 
 # extend Rails
-require 'models/whowish_word'
-require 'controllers/whowish_word_controller'
+require 'app/models/whowish_word'
+require 'app/controllers/whowish_word_controller'
 
 class ActionView::Base
   
@@ -35,10 +35,8 @@ class ActionView::Base
       @@whowish_word[word.page_id][word.word_id.to_sym] = word.content
     }
   end
-
-  def word_for(id, *p)
-    page_id = template.to_s
-    
+  
+  def self.whowish_word_for(page_id,id,*p)
     if @@whowish_word[page_id] and @@whowish_word[page_id][id]
       
       s = @@whowish_word[page_id][id].to_s
@@ -53,15 +51,27 @@ class ActionView::Base
       
       return s
     else
-      raise page_id +" does not have any wordings" if !@@whowish_word[page_id]
-      raise page_id +" does not contain wording for '"+id.to_s+"'" if !@@whowish_word[page_id][id]
+#      raise page_id +" does not have any wordings" if !@@whowish_word[page_id]
+#      raise page_id +" does not contain wording for '"+id.to_s+"'" if !@@whowish_word[page_id][id]
+      return '#'+page_id+":"+id.to_s
     end
-    
+  end
+
+  def word_for(id, *p)
+    ActionView::Base.whowish_word_for(template.to_s,id,*p)
   end
 end
 
 # init all words
 ActionView::Base.init_whowish_word
+
+class ActionMailer::Base
+  
+  def word_for(id, *p)
+    ActionView::Base.whowish_word_for(mailer_name + "/" + @template+".html.erb",id,*p)
+    
+  end
+end
 
 # load all controllers, helpers, and models
 %w{ models controllers helpers }.each do |dir|
