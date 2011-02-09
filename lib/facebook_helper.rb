@@ -116,10 +116,8 @@ module FacebookHelper
     end
   
   private
-    def get_data(method,id="")
-      print "START GET DATA"
-      id = facebook_id if id == ""
-      
+    def get_data(method,user_id=facebook_id)
+
       require 'net/http'
       require 'net/https'
       require 'uri'
@@ -139,11 +137,11 @@ module FacebookHelper
   end
   
   private
-    def post_data(method,data)
+    def post_data(method,data,user_id=facebook_id)
      
       
       require 'cgi'
-      nvp = "access_token="+@oauth_token  
+      nvp = "access_token="+$oauth_token  
       data.each_pair { |key, value| 
         nvp += '&' + key + '=' + CGI.escape(value)
       }
