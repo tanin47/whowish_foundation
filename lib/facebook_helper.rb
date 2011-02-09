@@ -45,10 +45,13 @@ module FacebookHelper
         $facebook = get_facebook_info(data['user_id'])
         $facebook.set_as_current_user(data)
         #print ActiveSupport::JSON.encode($facebook)
+      else
+        $facebook = nil
       end
     rescue => e
       print e.to_s + "\n\n"
       logger.info 'in decode_signed_request #{e}'
+      $facebook = nil
     end
     
     
@@ -60,7 +63,7 @@ module FacebookHelper
   
   def require_basic_information_permission
     
-    if $facebook == nil or $facebook.facebook_id == nil
+    if !$facebook or $facebook.facebook_id == nil
       
       @redirect_url = "http://www.facebook.com/dialog/oauth/?" +
                   #"scope=email" +
