@@ -35,20 +35,24 @@ module FacebookHelper
       
 #      print "sig="+sig +"--\n"
 #      print "expected_sig="+expected_sig+"--\n"
-#      print ActiveSupport::JSON.encode(data)+"\n"
+      print ActiveSupport::JSON.encode(data)+"\n"
+      print data['user_id'] +"\n"
       $oauth_token = data['oauth_token']
       
-#      print (sig == expected_sig).to_s + "\n\n"
+      print (sig == expected_sig).to_s + "\n\n"
   
       if sig == expected_sig and data['user_id']
         
         $facebook = get_facebook_info(data['user_id'])
         $facebook.set_as_current_user(data)
         #print ActiveSupport::JSON.encode($facebook)
+      else
+        $facebook = nil
       end
     rescue => e
       print e.to_s + "\n\n"
       logger.info 'in decode_signed_request #{e}'
+      $facebook = nil
     end
     
     
@@ -60,7 +64,7 @@ module FacebookHelper
   
   def require_basic_information_permission
     
-    if $facebook == nil or $facebook.facebook_id == nil
+    if !$facebook or $facebook.facebook_id == nil
       
       @redirect_url = "http://www.facebook.com/dialog/oauth/?" +
                   #"scope=email" +
@@ -113,7 +117,7 @@ module FacebookHelper
   
   private
     def get_data(method,id="")
-      
+      print "START GET DATA"
       id = facebook_id if id == ""
       
       require 'net/http'
