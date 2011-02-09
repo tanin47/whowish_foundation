@@ -62,14 +62,14 @@ module FacebookHelper
   
 
   
-  def require_basic_information_permission
+  def require_basic_information_permission(scope="")
     
     if !$facebook or $facebook.facebook_id == nil
       
-      @redirect_url = "http://www.facebook.com/dialog/oauth/?" +
-                  #"scope=email" +
-                  "&client_id=" + APP_ID +
-                  "&redirect_uri=http://apps.facebook.com/"+FACEBOOK_APP_NAME+"/"
+      @redirect_url = "http://www.facebook.com/dialog/oauth/?" 
+      @redirect_url += "scope=email&" if scope != ""
+      @redirect_url += "client_id=" + APP_ID +
+                   "&redirect_uri=http://apps.facebook.com/"+FACEBOOK_APP_NAME+"/"
       render "redirect/index", :layout=>"blank"
       return
     end
