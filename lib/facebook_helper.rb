@@ -1,7 +1,7 @@
 module FacebookHelper
   
   def decode_signed_request
-    
+    #
     begin
     
       if !params[:signed_request]
