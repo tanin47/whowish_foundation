@@ -13,9 +13,13 @@ class FacebookCache < ActiveRecord::Base
     all_friends
   end
   
+  def home_url
+    return '/home?user_id='+facebook_id
+  end
+  
   def get_badge(color='')
     style_color = 'style="color: '+color+' !important;"'
-    return '<a href="http://www.facebook.com/profile.php?id='+facebook_id+'" target="_new_<%=user.facebook_id%>" title="Go to '+get_possessive_adj(self).downcase+' facebook"><span style=" background-image:url(/whowish_foundation_asset/profileIcon.png);width:10px;height:10px;display:inline-block;vertical-align:middle;cursor: pointer;margin-right:1px;"></span></a> <a '+style_color+' href="/home?user_id='+facebook_id+'"  title="Go to '+get_possessive_adj(self).downcase+' home page">'+name+'</a>'
+    return '<a href="http://www.facebook.com/profile.php?id='+facebook_id+'" target="_new_<%=user.facebook_id%>" title="Go to '+get_possessive_adj(self).downcase+' facebook"><span style=" background-image:url(/whowish_foundation_asset/profileIcon.png);width:10px;height:10px;display:inline-block;vertical-align:middle;cursor: pointer;margin-right:1px;"></span></a> <a '+style_color+' href="'+home_url+'"  title="Go to '+get_possessive_adj(self).downcase+' home page">'+name+'</a>'
   end
   
   def profile_picture_url(type="square")
