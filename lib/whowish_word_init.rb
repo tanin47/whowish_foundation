@@ -39,7 +39,7 @@ class ActionView::Base
   def self.whowish_word_for(page_id,id,*p)
     if @@whowish_word[page_id] and @@whowish_word[page_id][id]
       
-      s = @@whowish_word[page_id][id].to_s
+      s = (@@whowish_word[page_id][id].to_s) + ""
       
      if p.length > 0
         p = p[0]
