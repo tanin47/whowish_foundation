@@ -32,9 +32,12 @@ class FacebookCache < ActiveRecord::Base
       friend = FacebookFriendCache.new(:facebook_id=>facebook_id,:updated_date=>Time.now)
       result_data = get_data("friends")
 
-      if ActiveSupport::JSON.decode(result_data)["data"]
-        friend.friends = result_data
-        friend.save 
+      begin 
+        if ActiveSupport::JSON.decode(result_data)["data"]
+          friend.friends = result_data
+          friend.save 
+        end
+      rescue
       end
     end
     
@@ -42,9 +45,12 @@ class FacebookCache < ActiveRecord::Base
       friend.updated_date = Time.now
       result_data = get_data("friends")
 
-      if ActiveSupport::JSON.decode(result_data)["data"]
-        friend.friends = result_data
-        friend.save 
+      begin 
+        if ActiveSupport::JSON.decode(result_data)["data"]
+          friend.friends = result_data
+          friend.save 
+        end
+      rescue
       end
     end
     

@@ -124,7 +124,7 @@ module FacebookHelper
       
       Net::HTTP.version_1_2
       
-      url = URI.parse("https://graph.facebook.com/"+id+"/"+method)
+      url = URI.parse("https://graph.facebook.com/"+user_id+"/"+method)
   
       http = Net::HTTP.new(url.host,url.port)
       http.use_ssl = true
