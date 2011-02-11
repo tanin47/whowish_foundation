@@ -36,7 +36,7 @@ module ImageHelper
       end
       
       temp_images_name.each do |temp_image|
-        if !event_images_name.include?(temp_image)
+        if !images_name.include?(temp_image)
          
           ext = File.extname( temp_image ).sub( /^\./, "" ).downcase
           
@@ -51,7 +51,7 @@ module ImageHelper
           end
           
           img = image_class.new
-          img.event_id = id
+          img[field_id] = id
           img.ordered_number = order
           img.original_image_path = new_img_name
           img.save

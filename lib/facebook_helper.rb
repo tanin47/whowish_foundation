@@ -8,6 +8,11 @@ module FacebookHelper
         params[:signed_request] = session[:signed_request]
       end
       
+      if !params[:signed_request]
+        redirect_to "http://www.facebook.com/"+FACEBOOK_APP_NAME
+        return
+      end
+      
       #print "sign request = " + params[:signed_request] + "\n"
       
       session[:signed_request] = params[:signed_request]
