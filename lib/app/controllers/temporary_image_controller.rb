@@ -7,6 +7,7 @@ class TemporaryImageController < ActionController::Base
 
     response.headers['Content-type'] = 'text/plain; charset=utf-8'
     render :json=>return_json
+    #
   end
   
   def upload_temporary_image(image_data)
@@ -18,27 +19,32 @@ class TemporaryImageController < ActionController::Base
       return {:ok=>false, :error_message=>"The database has failed."}
     end
     
-    begin
-      
-      ext = File.extname( image_data.original_filename ).sub( /^\./, "" ).downcase
-      
-      temp_image.name = "temp_"+temp_image.id.to_s+"."+ext
-        
-      if !["jpg","jpeg","gif","png"].include?(ext)
-        return {:ok=>false, :error_message=>"The extension ("+ext+") is not allowed."}
-      end
-      
-      input_file_stream = image_data.read
-      
-      if !temp_image.save
-        return {:ok=>false, :error_message=>"The database has failed."}
-      end
+    ext = File.extname( image_data.original_filename ).sub( /^\./, "" ).downcase
+
+    if !["jpg","jpeg","gif","png"].include?(ext)
+      return {:ok=>false, :error_message=>"The extension ("+ext+") is not allowed."}
+    end
     
-      File.open(RAILS_ROOT+"/public/uploads/"+temp_image.name, "wb") { |f| 
-        f.write(input_file_stream) 
-      }
-      
-      File.chmod(0777, get_server_path_of("/uploads/"+temp_image.name)) 
+    temp_image.name = "temp_"+temp_image.id.to_s+"."+ext
+    
+    begin
+
+      if ENV['S3_KEY'] == "true"
+        
+        AWS::S3::S3Object.store("uploads/"+temp_image.name, image_data.read, AWS_S3_BUCKET_NAME,:access=>:public_read)
+
+      else
+        
+        if !temp_image.save
+          return {:ok=>false, :error_message=>"The database has failed."}
+        end
+        
+        File.open(RAILS_ROOT+"/public/uploads/"+temp_image.name, "wb") { |f| 
+          f.write(image_data.read) 
+        }
+        
+        File.chmod(0777, get_server_path_of("/uploads/"+temp_image.name)) 
+      end
 
       #image_resize("public/uploads/temp/"+temp_image.name, 112, 112, "public/uploads/temp/"+thumbnailize_name(temp_image.name,112,112))
       

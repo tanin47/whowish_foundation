@@ -14,10 +14,15 @@ class ThumbnailController < ActionController::Base
     
     url = make_thumbnail(params[:file],w,h)
     
-    if url == '' or !File.exists?(RAILS_ROOT+'/public'+url)
+    if url == '' or !image_exists?(url)
       render :text=>"Not found"
     else
-      redirect_to url
+      if ENV['S3_ENABLED']
+        redirect_to 'http://s3.amazonaws.com/'+AWS_S3_BUCKET_NAME+url
+      else
+        redirect_to url
+      end
+      
     end
   end
 end
