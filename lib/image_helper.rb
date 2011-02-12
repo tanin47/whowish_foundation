@@ -22,7 +22,7 @@ module ImageHelper
 
       images.each do |image|
         if !temp_images_name.include?(image.original_image_path)
-          delete_image("/uploads/" + image.original_image_path)
+          delete_image( image.original_image_path)
           image.destroy
         end
       end
@@ -42,11 +42,10 @@ module ImageHelper
           
           new_img_name = prefix+"_" + id.to_s + "_" + img_id.to_s + "." + ext
           
-          require 'ftools'
+          
       
           begin
-            File.copy(get_server_path_of("/uploads/" + temp_image),get_server_path_of("/uploads/" + new_img_name))  
-            File.chmod(0777, get_server_path_of("/uploads/" + new_img_name)) 
+            image_copy(temp_image,new_img_name)
           rescue
           end
           
@@ -58,7 +57,7 @@ module ImageHelper
           
           img_id = img_id + 1
           order = order + 1
-          delete_image( "/uploads/" + temp_image)
+          delete_image(temp_image)
 
         end
       end

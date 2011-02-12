@@ -27,17 +27,16 @@ class TemporaryImageController < ActionController::Base
     
     temp_image.name = "temp_"+temp_image.id.to_s+"."+ext
     
+    if !temp_image.save
+      return {:ok=>false, :error_message=>"The database has failed."}
+    end
+    
     begin
-
-      if ENV['S3_KEY'] == "true"
+      if ENV['S3_ENABLED']
         
-        AWS::S3::S3Object.store("uploads/"+temp_image.name, image_data.read, AWS_S3_BUCKET_NAME,:access=>:public_read)
+        AWS::S3::S3Object.store(get_server_path_of(temp_image.name), image_data.read, AWS_S3_BUCKET_NAME,:access=>:public_read)
 
       else
-        
-        if !temp_image.save
-          return {:ok=>false, :error_message=>"The database has failed."}
-        end
         
         File.open(RAILS_ROOT+"/public/uploads/"+temp_image.name, "wb") { |f| 
           f.write(image_data.read) 

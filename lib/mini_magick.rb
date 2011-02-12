@@ -85,6 +85,10 @@ module MiniMagick
     def to_blob
       File.read @path
     end
+    
+    def path
+     @path
+    end
 
     # If an unknown method is called then it is sent through the morgrify program
     # Look here to find all the commands (http://www.imagemagick.org/script/mogrify.php)
