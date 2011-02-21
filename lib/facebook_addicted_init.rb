@@ -13,6 +13,7 @@ ActionController::Base.append_view_path(RAILS_ROOT+"/vendor/plugins/whowish_foun
 
 ActionController::Routing::Routes.draw do |map|
   map.connect 'redirect/:action', :controller => 'redirect'
+  map.connect 'facebook_error/:action', :controller => 'facebook_error'
 end 
 begin
   ActiveRecord::Schema.define do
@@ -35,6 +36,7 @@ begin
     create_table "facebook_friend_caches", :force => false do |t|
       t.string   "facebook_id",  :null => false
       t.text     "friends",      :null => false
+      t.text     "friends_of_friends",      :null => false
       t.datetime "updated_date", :null => false
     end
   
@@ -46,3 +48,5 @@ end
 require 'facebook_helper'
 require 'facebook_cache'
 require 'facebook_friend_cache'
+require 'async_facebook_friend_cache'
+require 'async_facebook_cache'

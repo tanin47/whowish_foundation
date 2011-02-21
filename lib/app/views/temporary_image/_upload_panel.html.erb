@@ -126,7 +126,7 @@
 			onSubmit: function(file, extension) {
 				if (swfupload_is_loading == true) return;
 				start_swfupload_loading();
-				
+								
 				if (extension && /^(jpg|png|jpeg|gif)$/.test(extension.toLowerCase())) {
 					$('#swfupload_simple_upload_image_button').attr('disabled', 'disabled');
 					$('#swfupload_upload_loading').show();
@@ -195,11 +195,11 @@
 		flash_url : "/whowish_foundation_asset/swfupload/swfupload.swf",
 		upload_url: "/temporary_image",
 		post_params: {authenticity_token: "<%=form_authenticity_token%>",signed_request:"<%=params[:signed_request]%>"},
-		file_size_limit : "10 MB",
+		file_size_limit : "4 MB",
 		file_types : "*.*",
 		file_types_description : "All Files",
 		file_upload_limit : 0,
-		file_queue_limit : 0,
+		file_queue_limit : 1,
 /*		custom_settings : {
 			progressTarget : "fsUploadProgress",
 			cancelButtonId : "btnCancel"
@@ -228,6 +228,6 @@
 		queue_complete_handler : queueComplete	// Queue plugin event
 	});
 	
-	
+	//
 	
 </script>

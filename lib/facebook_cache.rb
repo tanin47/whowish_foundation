@@ -1,7 +1,35 @@
 class FacebookCache < ActiveRecord::Base
   include FacebookHelper
   
+  ERROR_NO_PERMISSION = "No permission"
+  ERROR_OTHER = "Other error"
+  SCOPE_EMAIL = "email"
+  SCOPE_PUBLISH_STREAM = "publish_stream"
+  SCOPE_EDUCATION_HISTORY = "education_history"
+  
   attr_accessor :oauth_token,:expires,:profile_id,:country,:locale
+  
+  def self.get_guest
+    return  new(:facebook_id=>"0",:name=>"Guest")
+  end
+  
+  def is_guest
+    return (facebook_id == nil or facebook_id == "0")
+  end
+  
+  def parse_error(response_obj)
+    return nil if !response_obj['error']
+    
+    if response_obj['error']['type'] == "OAuthException"
+      if response_obj['error']['message'].match('#200') #"(#341) Feed action request limit reached"
+        return {:error_id=>ERROR_NO_PERMISSION,:error_message=>response_obj['error']['message']}
+      else
+        return {:error_id=>ERROR_OTHER,:error_message=>response_obj['error']['message']}
+      end
+    else
+      return {:error_id=>ERROR_OTHER,:error_message=>response_obj['error']['message']}
+    end
+  end
  
   def set_as_current_user(hash_obj)
     @oauth_token = hash_obj['oauth_token']
@@ -14,58 +42,55 @@ class FacebookCache < ActiveRecord::Base
   end
   
   def home_url
-    return '/home?user_id='+facebook_id
+    
+    if is_guest
+      return '/home'
+    else
+      return '/home?user_id='+facebook_id
+    end
+    
+  end
+  
+  def profile_url
+    if is_guest
+      return '#'
+    else
+      return 'http://www.facebook.com/profile.php?id='+facebook_id
+    end
   end
   
   def get_badge(color='')
     style_color = 'style="color: '+color+' !important;"'
-    return '<a href="http://www.facebook.com/profile.php?id='+facebook_id+'" target="_new_<%=user.facebook_id%>" title="Go to '+get_possessive_adj(self).downcase+' facebook"><span class="facebook_profile_link"></span></a> <a '+style_color+' href="'+home_url+'"  title="Go to '+get_possessive_adj(self).downcase+' home page">'+name+'</a>'
+    
+    if is_guest
+      return '<span '+style_color+'>'+name+'</span>'
+    else
+      return '<a href="'+profile_url+'" target="_new_<%=user.facebook_id%>" title="Go to '+get_possessive_adj(self).downcase+' facebook"><span class="facebook_profile_link"></span></a> <a '+style_color+' href="'+home_url+'"  title="Go to '+get_possessive_adj(self).downcase+' home page">'+name+'</a>'
+    end
+    
   end
   
   def profile_picture_url(type="square")
-    return "http://graph.facebook.com/"+facebook_id+"/picture?type="+type
+    if is_guest
+      if type == "square"
+        return "/whowish_foundation_asset/facebook_blank_profile.jpg"
+      else
+        return "/whowish_foundation_asset/facebook_blank_profile_big.jpg"
+      end
+    else
+      return "http://graph.facebook.com/"+facebook_id+"/picture?type="+type
+    end
+    
   end
   
   def all_friends
-    
-    return [] if !facebook_id
-    
-    friend = FacebookFriendCache.first(:conditions=>{:facebook_id=>facebook_id})
-    
-    if !friend
-      friend = FacebookFriendCache.new(:facebook_id=>facebook_id,:updated_date=>Time.now)
-      result_data = get_data("friends")
-
-      begin 
-        if ActiveSupport::JSON.decode(result_data)["data"]
-          friend.friends = result_data
-          friend.save 
-        end
-      rescue
-      end
-    end
-    
-    if (Time.now - friend.updated_date) > 60*60*24
-      friend.updated_date = Time.now
-      result_data = get_data("friends")
-
-      begin 
-        if ActiveSupport::JSON.decode(result_data)["data"]
-          friend.friends = result_data
-          friend.save 
-        end
-      rescue
-      end
-    end
-    
-    begin 
-      result = ActiveSupport::JSON.decode(friend.friends)["data"]
-      raise "no friend" if result == nil
-      return result
-    rescue
-      return []
-    end
-
+    return [] if is_guest
+    get_friends(facebook_id)
+  end
+  
+  def all_friends_of_friends
+    return [] if is_guest
+    get_friends_of_friends(facebook_id)
   end
   
 end

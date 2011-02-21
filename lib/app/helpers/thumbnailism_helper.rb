@@ -132,10 +132,17 @@ module ThumbnailismHelper
   
   def get_thumbnail_url(full_file_path, w, h)
     full_file_path = get_server_path_of(full_file_path)
-    
-        
+
     full_file_path = full_file_path[(RAILS_ROOT+'/public/').length..-1] if full_file_path.match("^"+RAILS_ROOT+"/public/") 
-    return "/thumbnail/"+w.to_s+"x"+h.to_s+"/"+ full_file_path
+    
+    thumb_file_name = full_file_path.gsub(/\//, '__')  
+    
+    if ENV['S3_ENABLED']
+      return "http://s3.amazonaws.com/"+AWS_S3_BUCKET_NAME+"/uploads/thumbnail/"+w.to_s+"x"+h.to_s+"/"+ thumb_file_name
+    else
+      return "/uploads/thumbnail/"+w.to_s+"x"+h.to_s+"/"+ thumb_file_name
+    end
+    
   end
   
   def delete_all_thumbnail_image(full_file_path)
@@ -143,7 +150,7 @@ module ThumbnailismHelper
     
     new_file_name = full_file_path.gsub(/\//, '__')
     
-    ["480x275","50x50","90x90"].each { |size| 
+    THUMBNAIL_SIZES.each { |size| 
        full_path = get_server_path_of("/thumbnail/"+size+"/"+new_file_name)
         if image_exists?(full_path)
           begin

@@ -6,8 +6,11 @@ class TemporaryImageController < ActionController::Base
     return_json = upload_temporary_image(params[:Filedata])
 
     response.headers['Content-type'] = 'text/plain; charset=utf-8'
+    
+    print return_json.inspect
+    
     render :json=>return_json
-    #
+    
   end
   
   def upload_temporary_image(image_data)
@@ -46,6 +49,8 @@ class TemporaryImageController < ActionController::Base
       end
 
       #image_resize("public/uploads/temp/"+temp_image.name, 112, 112, "public/uploads/temp/"+thumbnailize_name(temp_image.name,112,112))
+      temp_image.created_date = Time.now
+      temp_image.save
       
       return {:ok=>true, :filename=>"/uploads/"+temp_image.name}
     rescue Exception=>e

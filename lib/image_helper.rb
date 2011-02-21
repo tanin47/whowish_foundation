@@ -41,11 +41,17 @@ module ImageHelper
           ext = File.extname( temp_image ).sub( /^\./, "" ).downcase
           
           new_img_name = prefix+"_" + id.to_s + "_" + img_id.to_s + "." + ext
-          
-          
       
           begin
             image_copy(temp_image,new_img_name)
+          rescue
+          end
+        
+          begin
+            THUMBNAIL_SIZES.each { |size|
+              tokens = size.split('x')
+              make_thumbnail(new_img_name,tokens[0].to_i,tokens[1].to_i)
+            }
           rescue
           end
           

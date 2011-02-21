@@ -1,104 +1,146 @@
 module FacebookHelper
   
   def decode_signed_request
-    #
-    begin
+
+    $facebook = FacebookCache.get_guest
     
+    begin
       if !params[:signed_request]
         params[:signed_request] = session[:signed_request]
       end
-      
-      if !params[:signed_request]
-        redirect_to "http://www.facebook.com/"+FACEBOOK_APP_NAME
-        return
-      end
-      
-      #print "sign request = " + params[:signed_request] + "\n"
-      
+
       session[:signed_request] = params[:signed_request]
       
       require "base64"
       
       tokens = params[:signed_request].split('.')
-      #print "token[0]="+tokens[0] + "--\n"
-      #print "token[1]="+tokens[1] + "--\n"
-      
       sig = base64_urlsafe_decode(tokens[0])
-      
-      #print "decode64(token[1])="+base64_urlsafe_decode(tokens[1]) + "--\n"
       
       data = ActiveSupport::JSON.decode(base64_urlsafe_decode(tokens[1]))
       
-      if data['algorithm'].to_s.upcase != 'HMAC-SHA256'
-        return
-      end
+      if data['algorithm'].to_s.upcase == 'HMAC-SHA256'
       
-      #require 'hmac-sha2'
-      require 'openssl'
-      
-      expected_sig = OpenSSL::HMAC.digest(OpenSSL::Digest::Digest.new('sha256'), APP_SECRET, tokens[1]).to_s
-      
-#      print "sig="+sig +"--\n"
-#      print "expected_sig="+expected_sig+"--\n"
-      print ActiveSupport::JSON.encode(data)+"\n"
-      print data['user_id'] +"\n"
-      $oauth_token = data['oauth_token']
-      
-      print (sig == expected_sig).to_s + "\n\n"
-  
-      if sig == expected_sig and data['user_id']
+        require 'openssl'
         
-        $facebook = get_facebook_info(data['user_id'])
-        $facebook.set_as_current_user(data)
-        #print ActiveSupport::JSON.encode($facebook)
-      else
-        $facebook = nil
+        expected_sig = OpenSSL::HMAC.digest(OpenSSL::Digest::Digest.new('sha256'), APP_SECRET, tokens[1]).to_s
+        $oauth_token = data['oauth_token']
+
+        if sig == expected_sig and data['user_id']
+          
+          $facebook = get_facebook_info(data['user_id'])
+          $facebook.set_as_current_user(data)
+          
+         
+        end 
       end
-    rescue => e
-      print e.to_s + "\n\n"
-      logger.info 'in decode_signed_request #{e}'
-      $facebook = nil
-    end
-    
-    
-
-  end
-
-  
-
-  
-  def require_basic_information_permission(scope="")
-    
-    if !$facebook or $facebook.facebook_id == nil
       
-      @redirect_url = "http://www.facebook.com/dialog/oauth/?" 
-      @redirect_url += "scope="+scope+"&" if scope != ""
-      @redirect_url += "client_id=" + APP_ID +
-                   "&redirect_uri=http://apps.facebook.com/"+FACEBOOK_APP_NAME+"/"
-      render "redirect/index", :layout=>"blank"
-      return
+      return data
+    rescue
+      $facebook = FacebookCache.get_guest
+      return {}
     end
   end
 
-  def get_facebook_info(id)
+  def generate_permission_url(scope,return_url)
+      url = "http://www.facebook.com/dialog/oauth/?" 
+      url += "scope="+scope.join(",")+"&" if scope.length > 0
+      url += "client_id=" + APP_ID
+      url += "&redirect_uri="+CGI.escape(return_url)
+      return url
+  end
+
+
+  def get_facebook_info(id,force_update=false)
+    
+    return FacebookCache.get_guest if id == "0"
+    
     profile = FacebookCache.first(:conditions=>{:facebook_id=>id})
 
-    if !profile or (Time.now - profile.updated_date) > 60*60*24
+    if !profile or force_update
 
       profile = FacebookCache.new(:facebook_id=>id,:updated_date=>Time.now) if !profile
       
-      data = ActiveSupport::JSON.decode get_data("",id)
-      
-      profile.name = data['name'] if data['name'] and data['name'] != ""
-      profile.gender = data['gender']
-      profile.email = data['email'] if data['email'] and data['email'] != ""
-      
-      profile.college = get_latest_college(data['education'])
+      begin 
+        data = ActiveSupport::JSON.decode get_data("",id)
+        
+        profile.name = data['name'] if data['name'] and data['name'] != ""
+        profile.gender = data['gender']
+        profile.email = data['email'] if data['email'] and data['email'] != ""
+        
+        profile.college = get_latest_college(data['education'])
+      rescue
+      end
+    
       profile.updated_date = Time.now
       profile.save
     end
     
+    if !force_update and (Time.now - profile.updated_date) > 60*60*24
+      #schedule update job
+      Delayed::Job.enqueue AsyncFacebookCache.new(id,$oauth_token)
+    end
+    
     return profile
+  end
+  
+  def get_friends_of_friends(facebook_id)
+    
+    return [] if !facebook_id
+    return [] if facebook_id == "0"
+    
+    friend = FacebookFriendCache.first(:conditions=>{:facebook_id=>facebook_id})
+    
+    return [] if !friend
+    return friend.friends_of_friends.split(',')
+  end
+  
+  def compute_friends_of_friends(friends)
+    
+    print friends.inspect 
+    hash_f = {}
+    friends.each { |friend_id| hash_f[friend_id] = true }
+    
+    fof = []
+    FacebookFriendCache.all(:conditions=>["facebook_id in (?)",friends]).each { |ff|
+      ff.friends.split(',').each { |fof_id|
+        fof.push(fof_id) and (hash_f[fof_id] == true) if !hash_f[fof_id]
+      }
+    }
+    print fof.inspect
+    return friends + fof
+  end
+  
+  def get_friends(facebook_id,force_update=false,get_remote=true)
+    
+    return [] if !facebook_id
+    return [] if facebook_id == "0"
+    
+    friend = FacebookFriendCache.first(:conditions=>{:facebook_id=>facebook_id})
+    
+    if get_remote and (!friend or force_update)
+      friend = FacebookFriendCache.new(:facebook_id=>facebook_id,:updated_date=>Time.now) if !friend
+      result_data = get_data("friends",facebook_id)
+
+      begin 
+        data = ActiveSupport::JSON.decode(result_data)["data"]
+        friend.friends = data.map{ |i| i["id"]}.join(',')
+        friend.friends_of_friends  = compute_friends_of_friends(friend.friends.split(',')).join(',')
+      rescue Exception=>e
+        print "\n\n\n\n" + e + "\n\n\n\n"
+      end
+    
+      friend.updated_date = Time.now
+      friend.save 
+    end
+    
+    return [] if !friend
+    
+    if !force_update and (Time.now - friend.updated_date) > 60*60*24
+      #schedule update job
+      Delayed::Job.enqueue AsyncFacebookFriendCache.new(facebook_id,$oauth_token)
+    end
+
+    return (friend.friends.split(',') rescue [])
   end
   
   private 
@@ -177,7 +219,7 @@ module FacebookHelper
       user = get_facebook_info(user)
     end
     
-    if user.facebook_id == $facebook.facebook_id and third_person_only == false
+    if third_person_only == false and $facebook and user.facebook_id == $facebook.facebook_id 
       return "My"
     else
       return "Her" if user.gender == "female"
@@ -191,7 +233,7 @@ module FacebookHelper
       user = get_facebook_info(user)
     end
     
-    if user.facebook_id == $facebook.facebook_id and third_person_only == false
+    if third_person_only == false and $facebook and user.facebook_id == $facebook.facebook_id  
       return "Mine"
     else
       return "Hers" if user.gender == "female"
@@ -205,7 +247,7 @@ module FacebookHelper
       user = get_facebook_info(user)
     end
     
-    if user.facebook_id == $facebook.facebook_id
+    if $facebook and user.facebook_id == $facebook.facebook_id
       return "me"
     else
       return "her" if user.gender == "female"
@@ -235,7 +277,7 @@ module FacebookHelper
       user = get_facebook_info(user)
     end
     
-    return "I" if user.facebook_id == $facebook.facebook_id
+    return "I" if $facebook and user.facebook_id == $facebook.facebook_id
     
     return "she" if user.gender == "female"
     return "he"
